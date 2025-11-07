@@ -17,7 +17,7 @@ function Banners() {
             <div className="flex items-center justify-between px-8 py-4">
                 <header>
                     <h1 className="text-2xl font-bold tracking-tight sm:text-4xl">
-                        <Link href='/'>Gateless Parking</Link>
+                        <Link href='/'>SmartPark India</Link>
                     </h1>
                 </header>
                 <div>
