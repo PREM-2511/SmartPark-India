@@ -15,7 +15,7 @@ export function formatAmountForDisplay(
   amount: number, currency: string
 ): string {
 
-  let numberFormat = new Intl.NumberFormat(['en-US'], {
+  let numberFormat = new Intl.NumberFormat(['en-IN'], {
     style:'currency',
     currency: currency,
     currencyDisplay: 'symbol'
@@ -30,7 +30,7 @@ export function formatAmountForStripe(
   currency: string
 ): number {
 
-  let numberFormat = new Intl.NumberFormat(['en-US'], {
+  let numberFormat = new Intl.NumberFormat(['en-IN'], {
     style:'currency',
     currency: currency,
     currencyDisplay: 'symbol'
@@ -64,7 +64,7 @@ export const buildMapInfoCardContent = (title: string, address: string, totalSpo
       <div>${address}</div>
       <hr />
       <div>Total spots: ${totalSpots}</div>
-      <div>Hourly price: ${formatAmountForDisplay(price, 'CAD')}</div>
+      <div>Hourly price: ${formatAmountForDisplay(price, 'INR')}</div>
       </div>
       
   </div>

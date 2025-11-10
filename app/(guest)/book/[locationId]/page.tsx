@@ -99,11 +99,11 @@ function BookPage() {
                         <div className="flex flex-col bg-slate-100 p-4 gap-y-2 rounded">
                             <div className="flex justify-between text-sm font-bold">
                                 <p>Hourly rate</p>
-                                <p>{location ? formatAmountForDisplay(location.price.hourly, 'CAD') : '...'}</p>
+                                <p>{location ? formatAmountForDisplay(location.price.hourly, 'INR') : '...'}</p>
                             </div>
                             <div className="flex justify-between text-sm font-bold">
                                 <p>{diffInHours} Hours</p>
-                                <p>{location ? formatAmountForDisplay(diffInHours * location.price.hourly, 'CAD') : '...'}</p>
+                                <p>{location ? formatAmountForDisplay(diffInHours * location.price.hourly, 'INR') : '...'}</p>
                             </div>
                         </div>
 
@@ -116,7 +116,7 @@ function BookPage() {
                                         Plate #
                                     </FormLabel>
                                     <FormControl>
-                                        <Input className='uppercase' placeholder='ABCD 1234' {...field} />
+                                        <Input className='uppercase' placeholder='MH 01 AB 1234' {...field} />
                                     </FormControl>
                                     <FormDescription>
                                     Make sure your license plate matches the vehicle you park to avoid a parking ticket or towing.

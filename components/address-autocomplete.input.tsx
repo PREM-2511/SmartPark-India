@@ -28,16 +28,16 @@ function AddressAutoCompleteInput({
     useEffect(() => {
 
         if (isLoaded) {
-            const ontarioBounds = new google.maps.LatLngBounds(
-                new google.maps.LatLng({ lat: 48.4026688, lng: -89.4053302 }), // south west
-                new google.maps.LatLng({ lat: 54.3666786, lng: -82.5269667 }) // north east
+            const miraroadBounds = new google.maps.LatLngBounds(
+                new google.maps.LatLng({ lat: 19.270106241850048, lng: 72.85735328411506 }), // south west
+                new google.maps.LatLng({ lat: 19.302627382146635, lng: 72.87606918009341 }) // north east
             )
 
             const gAutoComplete  = new google.maps.places.Autocomplete(placesAutoCompleteRef.current as HTMLInputElement, {
-                bounds: ontarioBounds,
+                bounds: miraroadBounds,
                 fields: ['formatted_address', 'geometry'],
                 componentRestrictions: {
-                    country: ['ca']
+                    country: ['in']
                 }
             })
 
