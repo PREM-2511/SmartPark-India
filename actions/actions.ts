@@ -169,7 +169,7 @@ export async function sendConfirmationEmail(bookingid: string): Promise<ActionRe
 
         if (booking) {
             const { data, error } = await resend.emails.send({
-                from: "Gateless Parking <booking@grepsoft.com>",
+                from: "SmartPark India <booking@SmartParkIndia.com>",
                 to: user.primaryEmailAddress?.emailAddress!,
                 subject: "Your booking has been confirmed",
                 react: EmailTemplate({
@@ -214,7 +214,7 @@ export async function sendViolationEmail(plate: string, address: string, timesta
     try {
 
         const { data, error } = await resend.emails.send({
-            from: "Gateless Parking <violation@grepsoft.com>",
+            from: "SmartPark India <violation@SmartParkIndia.com>",
             to: process.env.VIOLATION_EMAIL!,
             subject: "Violation reported",
             react: ViolationEmailTemplate({

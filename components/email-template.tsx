@@ -39,7 +39,7 @@ function EmailTemplate(props: EmailTemplateProps) {
             <Preview>Your parking reservation receipt.</Preview>
             <Body style={main}>
                 <Container style={container}>
-                    <Heading as="h1" style={{ fontSize: '36px', lineHeight: 1.3, color: "#747474", fontWeight: 700, textAlign: "center" }}>Gateless Parking</Heading>
+                    <Heading as="h1" style={{ fontSize: '36px', lineHeight: 1.3, color: "#747474", fontWeight: 700, textAlign: "center" }}>SmartPark India</Heading>
                     <Hr />
                     <Text style={{ fontSize: '22px', padding: '20px', lineHeight: 1.3, color: "#808080" }}>Hi {firstName},</Text>
                     <Text style={{ fontSize: '22px', padding: '20px', lineHeight: 1.3, color: "#808080" }}>Thank you for booking a spot with us!</Text>
@@ -107,7 +107,7 @@ function EmailTemplate(props: EmailTemplateProps) {
                         </Row>
                         <Row>
                             <Text style={footer.text}>
-                                © 2024 Gateless Parking, Inc. All Rights Reserved.
+                                © 2025 SmartPark India, Inc. All Rights Reserved.
                             </Text>
                         </Row>
                     </Section>

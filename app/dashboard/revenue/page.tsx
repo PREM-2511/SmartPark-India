@@ -66,7 +66,7 @@ async function RevenuePage() {
               <div className="mb-4 grid grid-cols-1 items-start pb-4 last:mb-0 last:pb-0">
                 <div className="space-y-2">
                   <p className="text-lg font-medium leading none">
-                    Revenue: {formatAmountForDisplay(location.totalAmount, 'CAD')}
+                    Revenue: {formatAmountForDisplay(location.totalAmount, 'INR')}
                   </p>
                 </div>
               </div>
