@@ -47,7 +47,7 @@ export async function createCheckoutSession(data: FormData): Promise<void> {
             {
                 quantity: 1,
                 price_data: {
-                    currency: 'cad',
+                    currency: 'INR',
                     product_data: {
                         name: `Parking at ${data.get('address') as string}`
                     },

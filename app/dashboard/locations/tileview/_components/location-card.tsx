@@ -11,7 +11,7 @@ type Props = {
     address: string,
     numberOfSpots: number,
     spotsBooked: number,
-    spotsAvailable: number,
+    // spotsAvailable: number,
     status: string,
     price: {
         hourly: number
@@ -19,8 +19,10 @@ type Props = {
 }
 
 const LocationCard: React.FC<Props> = ({
-    id, name, address, numberOfSpots, spotsBooked, spotsAvailable, status, price
+    id, name, address, numberOfSpots, spotsBooked, status, price
 }) => {
+
+    const calculatedSpotsAvailable = numberOfSpots - spotsBooked;
 
     return (
         <Card className="w-full lg:w-[350px]">
@@ -43,7 +45,7 @@ const LocationCard: React.FC<Props> = ({
                         <p className="text-sm font-medium leading-none">Number of spots: {numberOfSpots}</p>
                         <hr />
                         <p className="text-sm font-medium leading-none">Spots booked: {spotsBooked}</p>
-                        <p className="text-sm font-medium leading-none">Spots Available: {spotsAvailable}</p>
+                        <p className="text-sm font-medium leading-none">Spots Available: {calculatedSpotsAvailable}</p>
                     </div>
                 </div>
             </CardContent>
@@ -51,7 +53,7 @@ const LocationCard: React.FC<Props> = ({
                     <LocationDeleteButton props={
                         JSON.stringify({ id: id})
                     } />
-                    <Link href={`./edit/${id}`} >
+                    <Link href={`/dashboard/locations/edit/${id}`} >
                         <PencilIcon color="blue" />
                     </Link>
             </CardFooter>

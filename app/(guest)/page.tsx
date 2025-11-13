@@ -77,7 +77,7 @@ export default function Home() {
 
             <div className="pt-8 sm:pt-0">
               <Image alt="mobile screenshot" width={320} height={400}
-              src="/gateless-parking-mobile.png" />
+              src="/SmartPark India-mobile-view.png" />
             </div>
           </div>
 

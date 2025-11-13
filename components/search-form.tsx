@@ -67,8 +67,8 @@ function SearchForm({
 
     }
     return (
-        <div className="flex flex-col lg:flex-row">
-            <div className='grid gap-y-1.5 lg:w-1/2'>
+        <div className="flex flex-col lg:flex-row lg:gap-x-6 gap-y-3">
+            <div className='grid gap-y-1.5 w-full lg:w-1/3'>
                 <Label htmlFor='parkingat'>Address</Label>
                 <AddressAutoCompleteInput onAddressSelect={handleAddressSelect} selectedAddress='' />
             </div>

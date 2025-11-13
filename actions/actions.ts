@@ -11,6 +11,7 @@ import { currentUser } from "@clerk/nextjs/server"
 import { compareAsc, format, formatDate } from "date-fns"
 import { revalidatePath } from "next/cache"
 import { Resend } from 'resend'
+import { redirect } from "next/navigation"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -47,9 +48,10 @@ export async function deleteLocation({ id, path }: {
     }
 }
 
-
 export async function updateLocation({ id, path, location }: {
-    id: string, path: string, location: UpdateLocationParams
+    id: string,
+    path: string,
+    location: UpdateLocationParams
 }) {
 
     try {
@@ -61,12 +63,14 @@ export async function updateLocation({ id, path, location }: {
             $set: location
         })
 
-        revalidatePath(path)
+        revalidatePath(path) 
+        revalidatePath('/dashboard/locations') 
+
     } catch (error) {
         console.log(error)
         throw error
     }
-
+    redirect('/dashboard/locations/tileview')
 }
 
 export async function findNearbyLocations(maxDistance: number, searchParams: SearchParams) {
@@ -244,7 +248,6 @@ export async function sendViolationEmail(plate: string, address: string, timesta
         throw error
     }
 }
-
 
 export async function cancelBooking({ bookingid, path }: {
     bookingid: string, path: string
