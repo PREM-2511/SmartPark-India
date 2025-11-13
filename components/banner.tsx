@@ -38,8 +38,12 @@ function Banners() {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        Signout
-                        Signin
+                        <SignedOut>
+                            <SignInButton />
+                        </SignedOut>
+                        <SignedIn>
+                            <UserButton />
+                        </SignedIn>
                     </div>
 
                     <div className="hidden sm:flex gap-x-4 items-center">

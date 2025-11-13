@@ -16,7 +16,7 @@ function Summary({
             <div className='flex flex-col gap-y-2 text-lg text-muted-foreground'>
                 <p>{mySpotStore.data.address}</p>
                 <p>Number of spot(s): {mySpotStore.data.numberofspots}</p>
-                <p>Hourly: {formatAmountForDisplay(mySpotStore.data.price?.hourly!, 'cad')}</p>
+                <p>Hourly: {formatAmountForDisplay(mySpotStore.data.price?.hourly!, 'INR')}</p>
             </div>
 
             <div className='flex justify-between items-center py-4'>
