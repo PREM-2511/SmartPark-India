@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { updateBooking } from '@/actions/actions'
 import { Booking } from '@/schemas/booking'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -31,6 +32,7 @@ const FormSchema = z.object({
 function EditBookingButton({ booking }: { booking: Booking }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const router = useRouter()
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -49,10 +51,21 @@ function EditBookingButton({ booking }: { booking: Booking }) {
       pathname
     )
 
-    const { code, message } = response
+    const { code, message, url } = response
 
-    if (code == 0) {
+    if (code === 100 && url) {
+      // --- PAYMENT REQUIRED ---
+      // Redirect to Stripe checkout
+      router.push(url)
+
+    } else if (code === 0) {
+      // --- SUCCESS (FREE EDIT) ---
       setOpen(false)
+      toast.success(message)
+
+    } else {
+      // --- ANY ERROR ---
+      toast.error(message)
     }
 
     toast.success(message)

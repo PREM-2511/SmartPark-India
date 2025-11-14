@@ -10,6 +10,7 @@ import React from "react"
 import { CheckCircle2 } from "lucide-react"
 import { sendConfirmationEmail } from "@/actions/actions"
 import { currentUser } from "@clerk/nextjs/server"
+import { revalidatePath } from "next/cache"
 
 async function BookingCheckoutResultPage({
     searchParams
@@ -26,7 +27,7 @@ async function BookingCheckoutResultPage({
     if (!user) {
         throw new Error("You must be logged in")
     }
-    
+
     const checkoutSession: Stripe.Checkout.Session =
         await stripe.checkout.sessions.retrieve(session_id, {
             expand: ['payment_intent']
@@ -43,28 +44,89 @@ async function BookingCheckoutResultPage({
 
     if (paymentIntent.status === 'succeeded') {
         const metadata = checkoutSession.metadata as Metadata
-        const bookingid = metadata['bookingid']
 
         await connectToDB()
 
-        const booking = await BookingModel.findById<Booking>(bookingid).populate({
-            path: 'locationid', model: ParkingLocationModel
-        })
+        // --- START: NEW LOGIC ---
+        // Check if this is a booking edit
+        if (metadata && metadata.isEdit === 'true') {
 
-        if (booking) {
-            address = ((booking?.locationid as any) as ParkingLocation).address
-            date = formatDate(booking?.bookingdate!, 'MMM dd, yyyy')
-            arrivingon = formatDate(booking?.starttime!, 'hh:mm a')
-            leavingon = formatDate(booking?.endtime!, 'hh:mm a')
-            plate = booking.plate
+            // --- THIS IS A BOOKING EDIT ---
 
-            if (booking.status === BookingStatus.PENDING) {
-                booking.status = BookingStatus.BOOKED
-                booking.stripesessionid = session_id
+            // 1. Get the new data from metadata
+            const bookingId = metadata.bookingId;
+            const newStartTime = new Date(metadata.newStartTimeISO);
+            const newEndTime = new Date(metadata.newEndTimeISO);
+            const newDate = new Date(metadata.newDateISO);
+            const newTotalAmount = Number(metadata.newTotalAmount);
 
-                await booking.save()
+            // 2. Find and update the booking in one step
+            const updatedBooking = await BookingModel.findByIdAndUpdate(
+                bookingId,
+                {
+                    status: BookingStatus.BOOKED, // Re-confirm
+                    bookingdate: newDate,
+                    starttime: newStartTime,
+                    endtime: newEndTime,
+                    totalamount: newTotalAmount, // Update to the new *full* amount
+                    stripesessionid: session_id // Log the *new* payment ID
+                },
+                { new: true } // This returns the updated document
+            ).populate({ path: 'locationid', model: ParkingLocationModel });
 
-                await sendConfirmationEmail(bookingid)
+            // 3. Set variables for the success page
+            if (updatedBooking) {
+                address = ((updatedBooking.locationid as any) as ParkingLocation).address;
+                date = formatDate(updatedBooking.bookingdate!, 'MMM dd, yyyy');
+                arrivingon = formatDate(updatedBooking.starttime!, 'hh:mm a');
+                leavingon = formatDate(updatedBooking.endtime!, 'hh:mm a');
+                plate = updatedBooking.plate;
+
+                // 4. Revalidate the user's "My Bookings" page
+                revalidatePath('/mybookings');
+                // You could send a "booking updated" email here if you want
+            }
+
+        } else {
+            const bookingid = metadata['bookingid']
+            const booking = await BookingModel.findById<Booking>(bookingid).populate({
+                path: 'locationid', model: ParkingLocationModel
+            })
+
+            if (booking) {
+                address = ((booking?.locationid as any) as ParkingLocation).address
+                date = formatDate(booking?.bookingdate!, 'MMM dd, yyyy')
+                arrivingon = formatDate(booking?.starttime!, 'hh:mm a')
+                leavingon = formatDate(booking?.endtime!, 'hh:mm a')
+                plate = booking.plate
+
+                if (booking.status === BookingStatus.PENDING) {
+                    booking.status = BookingStatus.BOOKED
+                    booking.stripesessionid = session_id
+
+                    booking.totalamount = paymentIntent.amount_received;
+
+                    await booking.save()
+
+                    console.log("Attempting to update location with ID:", booking.locationid);
+
+                    try {
+                        await ParkingLocationModel.updateOne(
+                            { _id: (booking.locationid as ParkingLocation)._id }, // <-- FIX 1: Use the ._id from the object
+                            { $inc: { bookedspots: 1 } } // Increment the 'bookedspots' field by 1
+                        )
+                    } catch (e) {
+                        console.error("Failed to increment bookedspots:", e)
+                        // Don't crash the page, but log the error
+                    }
+
+                    revalidatePath('/dashboard')
+                    revalidatePath('/dashboard/locations/tileview')
+                    // Also revalidate the main search page
+                    revalidatePath('/')
+
+                    await sendConfirmationEmail(bookingid)
+                }
             }
         }
     }

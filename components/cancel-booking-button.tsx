@@ -6,6 +6,7 @@ import React, { useState, useTransition } from 'react'
 import { Button } from './ui/button'
 import { BanIcon } from 'lucide-react'
 import ConfirmationDialog from './confirmation-dialog'
+import { toast } from 'sonner'
 
 function CancelBookingButton({
     param
@@ -24,7 +25,15 @@ function CancelBookingButton({
         setOpen(false)
         startTransition(async () => {
             const result = await cancelBooking({ bookingid: bookingid, path: pathname })
-            console.log(result)
+
+            // --- 2. Add this logic ---
+            // Show a success or error message to the user
+            if (result.code === 0) {
+                toast.success(result.message)
+            } else {
+                toast.error(result.message)
+            }
+            // -----------------------
         })
     }
 

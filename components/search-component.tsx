@@ -18,7 +18,7 @@ export type SearchParams = {
 
 function SearchComponent() {
   const [search, setSearch] = useState<MapParams[]>([])
-  const [searchRadius, setSearchRadius] = useState(500)
+  const [searchRadius, setSearchRadius] = useState(5000)
   const [message, setMessage] = useState("Enter an address, date, time and click search")
   const [searchParams, setSearchParams] = useState<SearchParams | undefined>()
 

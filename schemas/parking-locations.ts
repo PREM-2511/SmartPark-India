@@ -25,6 +25,14 @@ const ParkingLocationSchema = new Schema<ParkingLocation>({
         lat: Number,
         lng: Number
     },
+
+    // --- ADD THIS BLOCK ---
+    bookedspots: {
+        type: Number,
+        default: 0
+    },
+    // ----------------------
+    
     numberofspots: Number,
     price: {
         hourly: Number,

@@ -13,6 +13,7 @@ export interface Booking extends Document {
     plate: string,      // vehicle plate. This can be used to cancel or view booking
     status: string,
     stripesessionid: string
+    totalamount: number;
 }
 
 const BookingSchema = new Schema<Booking>({
@@ -25,6 +26,15 @@ const BookingSchema = new Schema<Booking>({
     phone: String,
     timeoffset: Number,
     amount: Number,
+
+    // --- ADD THIS BLOCK ---
+    totalamount: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    // ----------------------
+    
     status: {
         type: String,
         default: BookingStatus.PENDING

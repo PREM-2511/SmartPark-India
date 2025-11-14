@@ -1,5 +1,6 @@
 'use server'
 
+import { stripe } from "@/lib/stripe"
 import EmailTemplate from "@/components/email-template"
 import { SearchParams } from "@/components/search-component"
 import ViolationEmailTemplate from "@/components/violation-email-template"
@@ -63,8 +64,8 @@ export async function updateLocation({ id, path, location }: {
             $set: location
         })
 
-        revalidatePath(path) 
-        revalidatePath('/dashboard/locations') 
+        revalidatePath(path)
+        revalidatePath('/dashboard/locations')
 
     } catch (error) {
         console.log(error)
@@ -173,7 +174,7 @@ export async function sendConfirmationEmail(bookingid: string): Promise<ActionRe
 
         if (booking) {
             const { data, error } = await resend.emails.send({
-                from: "SmartPark India <booking@SmartParkIndia.com>",
+                from: "SmartPark India <onboarding@resend.dev>",
                 to: user.primaryEmailAddress?.emailAddress!,
                 subject: "Your booking has been confirmed",
                 react: EmailTemplate({
@@ -218,7 +219,7 @@ export async function sendViolationEmail(plate: string, address: string, timesta
     try {
 
         const { data, error } = await resend.emails.send({
-            from: "SmartPark India <violation@SmartParkIndia.com>",
+            from: "SmartPark India <onboarding@resend.dev>",
             to: process.env.VIOLATION_EMAIL!,
             subject: "Violation reported",
             react: ViolationEmailTemplate({
@@ -256,10 +257,8 @@ export async function cancelBooking({ bookingid, path }: {
     try {
         await connectToDB()
 
-        const booking = await BookingModel.findByIdAndUpdate(bookingid, {
-            status: BookingStatus.CANCELLED,
-            amount: 0
-        })
+        // 3. Find the booking first, don't update it yet
+        const booking = await BookingModel.findById(bookingid)
 
         if (!booking) {
             return {
@@ -267,15 +266,43 @@ export async function cancelBooking({ bookingid, path }: {
                 message: 'Booking not found'
             }
         }
+        
+        // 4. If it's already cancelled, just return success
+        if (booking.status === BookingStatus.CANCELLED) {
+             return {
+                code: 0,
+                message: 'Booking already cancelled'
+            }
+        }
 
-        revalidatePath(path)
+        // 5. Update the booking status and save
+        booking.status = BookingStatus.CANCELLED
+        booking.amount = 0 // Your logic
+        await booking.save()
+
+        // --- THIS IS THE FIX ---
+        // 6. Decrement the 'bookedspots' count on the location
+        await ParkingLocationModel.updateOne(
+            { _id: booking.locationid },
+            { $inc: { bookedspots: -1 } } 
+        )
+        // -----------------------
+
+        // 7. Revalidate both pages
+        revalidatePath(path) // This revalidates '/mybookings'
+        revalidatePath('/dashboard/locations/tileview') // This revalidates the admin page
+
         return {
             code: 0,
             message: 'Booking cancelled'
         }
     } catch (error) {
         console.log(error)
-        throw error
+        // 8. Return an error object instead of throwing
+        return {
+            code: 1,
+            message: 'An error occurred while cancelling.'
+        }
     }
 }
 
@@ -288,20 +315,27 @@ export async function updateBooking(selfid: string, date: Date, starttime: strin
         const st = new Date(`${dt}T${starttime}`)
         const et = new Date(`${dt}T${endtime}`)
 
-        const originalBooking = await BookingModel.findById(selfid) as Booking
+        if (compareAsc(st, et) !== -1) {
+            return { code: 1, message: 'Start time must be before end time' }
+        }
+
+        const originalBooking = await BookingModel.findById<Booking>(selfid)
 
         if (!originalBooking) {
             throw new Error('Booking not found')
         }
 
-        const parkingLocation =
-            await ParkingLocationModel.findById(originalBooking.locationid).lean() as ParkingLocation
+        const parkingLocation = await ParkingLocationModel.findById<ParkingLocation>(originalBooking.locationid).lean()
 
+        if (!parkingLocation) {
+            throw new Error('Parking location not found')
+        }
+
+        // --- Collision Check (Your existing logic is good) ---
+        let condition: any = {}
         const originalStarttime = originalBooking.starttime
         const originalEndtime = originalBooking.endtime
-        let condition: any = {}
 
-        // check for collisions with existing booking
         if (compareAsc(st, originalStarttime) !== 0 && compareAsc(et, originalEndtime) !== 0) {
             condition['starttime'] = { $lt: et }
             condition['endtime'] = { $gt: st }
@@ -314,36 +348,118 @@ export async function updateBooking(selfid: string, date: Date, starttime: strin
         }
 
         const bookings = await BookingModel.find({
-            _id: {
-                $ne: selfid
-            },
+            _id: { $ne: selfid },
             locationid: originalBooking.locationid,
             status: BookingStatus.BOOKED,
             ...condition
         })
+        // --- End of Collision Check ---
 
         if (bookings.length < parkingLocation.numberofspots) {
-            originalBooking.bookingdate = date
-            originalBooking.starttime = st
-            originalBooking.endtime = et
+            // --- This is the new price calculation logic ---
 
-            await originalBooking.save()
-            revalidatePath(path)
+            // 1. Calculate new price
+            const newTotalPriceInPaise = calculatePriceInPaise(st, et, parkingLocation.price.hourly);
 
-            return {
-                code: 0,
-                message: 'booking updated'
+            // 2. Get old price (Assuming you store this on the booking)
+            const oldAmountPaidInPaise = originalBooking.totalamount;
+
+            // 3. Calculate the difference
+            const differenceInPaise = newTotalPriceInPaise - oldAmountPaidInPaise;
+
+            if (differenceInPaise <= 0) {
+                // --- FREE EDIT (Time reduced or same) ---
+                originalBooking.bookingdate = date
+                originalBooking.starttime = st
+                originalBooking.endtime = et
+                originalBooking.totalamount = newTotalPriceInPaise // Update to new, lower amount
+
+                await originalBooking.save()
+                revalidatePath(path)
+
+                return {
+                    code: 0,
+                    message: 'Booking updated'
+                }
+
+            } else {
+                // --- PAID EDIT (User owes more money) ---
+                // Create a Stripe session for the difference
+
+                const session = await stripe.checkout.sessions.create({
+                    payment_method_types: ['card'],
+                    line_items: [{
+                        price_data: {
+                            currency: 'inr',
+                            product_data: {
+                                name: `Booking Update: ${parkingLocation.address}`,
+                                description: 'Additional charge for time extension'
+                            },
+                            unit_amount: differenceInPaise, // Charge ONLY the difference
+                        },
+                        quantity: 1,
+                    }],
+                    mode: 'payment',
+                    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/book/checkout/result?session_id={CHECKOUT_SESSION_ID}`,
+                    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}${path}`, // Send back to 'My Bookings'
+
+                    // CRITICAL: Pass new booking data to the success page
+                    metadata: {
+                        isEdit: 'true',
+                        bookingId: selfid,
+                        newDateISO: date.toISOString(),
+                        newStartTimeISO: st.toISOString(),
+                        newEndTimeISO: et.toISOString(),
+                        newTotalAmount: newTotalPriceInPaise // The *new total*
+                    }
+                });
+
+                // Return a special code and the URL
+                return {
+                    code: 100, // 100 = Payment redirect
+                    url: session.url
+                }
             }
         }
 
+        // This runs if the collision check failed
         return {
             code: 1,
-            message: 'Failed to update booking'
+            message: 'These time slots are no longer available. Please try different times.'
         }
     } catch (error) {
         console.log(error)
-        throw error
+        return { code: 1, message: 'An unexpected error occurred.' }
     }
+}
+
+// Add this helper function in your actions file or a utils file
+
+/**
+ * Calculates the total price in paise (smallest currency unit).
+ * @param startTime The start date/time
+ * @param endTime The end date/time
+ * @param hourlyRate The hourly rate (e.g., 25 for ₹25)
+ * @returns The total price in paise (e.g., 5000 for ₹50.00)
+ */
+function calculatePriceInPaise(startTime: Date, endTime: Date, hourlyRate: number): number {
+    // Calculate duration in minutes
+    const durationInMinutes = (endTime.getTime() - startTime.getTime()) / 60000;
+
+    if (durationInMinutes <= 0) {
+        // Return 0 or throw an error if the time is invalid
+        return 0;
+    }
+
+    // Calculate price per minute
+    const pricePerMinute = hourlyRate / 60;
+
+    // Calculate total price in rupees
+    const totalPriceInRupees = pricePerMinute * durationInMinutes;
+
+    // Convert to paise and use Math.ceil to always round up
+    // This ensures you charge for partial hours (e.g., 1.5 hours)
+    return Math.ceil(totalPriceInRupees * 100);
 }
 
 export async function getBookings(date: Date,
@@ -382,8 +498,20 @@ export async function deleteBooking(bookingid: string) {
         connectToDB()
 
         const booking = await BookingModel.findByIdAndDelete(bookingid)
+        const deletedBooking = await BookingModel.findByIdAndDelete(bookingid);
+
+        if (deletedBooking) {
+            await ParkingLocationModel.updateOne(
+                { _id: deletedBooking.locationid },
+                { $inc: { bookedspots: -1 } } // Decrement the count by 1
+            );
+        }
+
+        // 3. Revalidate the paths so the admin card updates
+        revalidatePath('/dashboard/locations/tileview');
 
     } catch (error) {
+        console.error("Failed to delete booking:", error)
         throw error
     }
 }
