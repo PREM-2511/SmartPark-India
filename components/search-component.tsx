@@ -61,12 +61,12 @@ function SearchComponent() {
         <SearchForm onSearch={handleSearchDone}/>
         {
           search.length > 0 ? 
-          <div className="flex">
-            <div className="p-1 flex-none w-56 overflow-auto h-[600px]">
-              <SearchResult locations={search} params={searchParams as SearchParams} />
-            </div>
-            <div className="flex-1">
+          <div className="flex flex-col md:flex-row">
+            <div className="flex-1 w-full h-[300px] md:h-[600px]">
               <Map mapParams={JSON.stringify(search)} />
+            </div>
+            <div className="p-1 w-full md:flex-none md:w-56 overflow-auto h-auto md:h-[600px]">
+              <SearchResult locations={search} params={searchParams as SearchParams} />
             </div>
           </div>
           : <p className="text-center pt-12 pb-12 text-xl sm:text-4xl text-slate-300">{message}</p>
