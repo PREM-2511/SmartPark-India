@@ -1,22 +1,21 @@
 import { Booking } from "@/schemas/booking"
-import { Library } from "@googlemaps/js-api-loader"
 import { type ClassValue, clsx } from "clsx"
 import { compareAsc, differenceInMinutes, getHours, getMinutes } from "date-fns"
 import { twMerge } from "tailwind-merge"
 
-export const libs: Library[] = ['core', 'maps', 'places', 'marker']
+// Removed Google Maps Library import since we don't need it anymore!
+export const libs: string[] = ['core', 'maps', 'places', 'marker']
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
 
 export function formatAmountForDisplay(
   amount: number, currency: string
 ): string {
 
   let numberFormat = new Intl.NumberFormat(['en-IN'], {
-    style:'currency',
+    style: 'currency',
     currency: currency,
     currencyDisplay: 'symbol'
   })
@@ -31,7 +30,7 @@ export function formatAmountForStripe(
 ): number {
 
   let numberFormat = new Intl.NumberFormat(['en-IN'], {
-    style:'currency',
+    style: 'currency',
     currency: currency,
     currencyDisplay: 'symbol'
   })
@@ -48,15 +47,12 @@ export function formatAmountForStripe(
   return zeroDecimalCurrency ? amount : Math.round(amount * 100)
 }
 
-
 export function getStreetFromAddress(address: string) {
   return address.split(',')[0]
 }
 
-/// google maps
-export const buildMapInfoCardContent = (title: string, address: string, totalSpots: number, price: number)
-: string => {
-
+/// Leaflet Map Info Card Builders (These use standard HTML, so they work perfectly)
+export const buildMapInfoCardContent = (title: string, address: string, totalSpots: number, price: number): string => {
   return `
     <div class="map_infocard_content">
       <div class="map_infocard_title">${title}</div>
@@ -82,53 +78,49 @@ export const buildMapInfoCardContentForDestination = (title: string, address: st
   </div>`;
 }
 
+/// Leaflet Pin Builders (Replaced google.maps.marker.PinElement with standard DOM elements)
 export const parkingPin = (type: string) => {
-  const glyphImg = document.createElement('div')
-  glyphImg.innerHTML = `
+  const container = document.createElement('div')
+  container.innerHTML = `
     <div class="map_pin_container">
-      <img src='/${type}.png' />
+      <img src='/${type}.png' style="width: 35px; height: auto;" />
     </div>
   `
-
-  const pinElement = new google.maps.marker.PinElement({
-    glyph: glyphImg
-  })
-
-  return pinElement
+  // Return an object with 'element' to match your map.tsx logic
+  return { element: container }
 }
 
 export const parkingPinWithIndex = (type: string, index: number) => {
-  const glyphImg = document.createElement('div')
-  glyphImg.innerHTML = `
-    <div class="map_pin_container">
-      <div class="map_pin_id"><span>${index}</span></div>
-      <img src='${type}.png' />
+  const container = document.createElement('div');
+
+  // We use inline CSS here to force perfect alignment of the black circle over the pin
+  container.innerHTML = `
+    <div style="position: relative; width: 35px; height: 45px; display: flex; flex-direction: column; align-items: center;">
+      <div style="position: absolute; top: 4px; left: 50%; transform: translateX(-50%); background-color: black; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; z-index: 10;">
+        ${index + 1}
+      </div>
+      <img src='/${type}.png' style="width: 35px; height: auto;" />
     </div>
-  `
-
-  const pinElement = new google.maps.marker.PinElement({
-    glyph: glyphImg
-  })
-
-  return pinElement
+  `;
+  return { element: container };
 }
 
 export const destinationPin = (type: string) => {
-  const glyphImg = document.createElement('img');
-  glyphImg.src = `${type}.png`;
-  const pinElement = new google.maps.marker.PinElement({
-      glyph: glyphImg
-  })
+  const img = document.createElement('img');
+  img.src = `/${type}.png`;
+  img.style.width = '40px';
+  img.style.height = 'auto';
 
-  return pinElement
+  return { element: img }
 }
 
 export type ReturnType = {
   time: string,
   display: string
 }
-export function getTimeSlots(startTime = "00:00", endTime="23:45"): ReturnType[] {
-  const timeArray : ReturnType[] = []
+
+export function getTimeSlots(startTime = "00:00", endTime = "23:45"): ReturnType[] {
+  const timeArray: ReturnType[] = []
   const parsedStartTime: Date = new Date(`2000-01-01T${startTime}:00`)
   const parsedEndTime: Date = new Date(`2000-01-01T${endTime}:00`)
 
